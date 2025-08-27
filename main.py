@@ -202,6 +202,279 @@ class CCXTEndpointTester:
             if Confirm.ask("Save all endpoints data for reference?"):
                 self._save_endpoints_info_to_file(endpoints)
 
+    def check_supported_endpoints(self) -> None:
+        """Check which endpoints are actually supported by the exchange using the 'has' property"""
+        if not self.exchange_instance:
+            console.print("[red]No exchange instance available[/red]")
+            return
+
+        console.print(
+            f"\n[bold cyan]Checking supported endpoints for {self.exchange}[/bold cyan]"
+        )
+
+        # Get the 'has' dictionary which shows what's actually supported
+        has_dict = getattr(self.exchange_instance, "has", {})
+
+        if not has_dict:
+            console.print(
+                "[yellow]Exchange doesn't provide capability information[/yellow]"
+            )
+            return
+
+        # Categorize endpoints by support status
+        supported = {}
+        not_supported = {}
+        emulated = {}
+
+        # Common endpoint categories
+        categories = {
+            "Market Data": [
+                "fetchMarkets",
+                "fetchCurrencies",
+                "fetchTicker",
+                "fetchTickers",
+                "fetchOrderBook",
+                "fetchOHLCV",
+                "fetchTrades",
+                "fetchStatus",
+            ],
+            "Trading": [
+                "createOrder",
+                "cancelOrder",
+                "cancelAllOrders",
+                "editOrder",
+                "fetchOrder",
+                "fetchOrders",
+                "fetchOpenOrders",
+                "fetchClosedOrders",
+            ],
+            "Account": [
+                "fetchBalance",
+                "fetchMyTrades",
+                "fetchLedger",
+                "fetchTransactions",
+                "fetchDeposits",
+                "fetchWithdrawals",
+                "fetchDepositAddress",
+            ],
+            "Advanced": [
+                "fetchPositions",
+                "fetchFundingRate",
+                "fetchFundingHistory",
+                "fetchBorrowRate",
+                "fetchTradingFee",
+                "fetchTradingFees",
+            ],
+            "WebSocket": [
+                "ws",
+                "watchTicker",
+                "watchTickers",
+                "watchOrderBook",
+                "watchTrades",
+                "watchOHLCV",
+                "watchBalance",
+                "watchOrders",
+            ],
+        }
+
+        for category, endpoints in categories.items():
+            supported[category] = []
+            not_supported[category] = []
+            emulated[category] = []
+
+            for endpoint in endpoints:
+                if endpoint in has_dict:
+                    value = has_dict[endpoint]
+                    if value is True:
+                        supported[category].append(endpoint)
+                    elif value == "emulated":
+                        emulated[category].append(endpoint)
+                    else:
+                        not_supported[category].append(endpoint)
+                else:
+                    not_supported[category].append(endpoint)
+
+        # Display results in organized tables
+        for category in categories.keys():
+            if supported[category] or emulated[category] or not_supported[category]:
+                table = Table(title=f"{category} Endpoints Support Status")
+                table.add_column("Endpoint", style="white", width=25)
+                table.add_column("Status", style="white", width=15)
+                table.add_column("Notes", style="dim", width=30)
+
+                # Add supported endpoints
+                for endpoint in supported[category]:
+                    table.add_row(
+                        endpoint, "[green]✓ Supported[/green]", "Native implementation"
+                    )
+
+                # Add emulated endpoints
+                for endpoint in emulated[category]:
+                    table.add_row(
+                        endpoint,
+                        "[yellow]⚡ Emulated[/yellow]",
+                        "Implemented via other methods",
+                    )
+
+                # Add not supported endpoints
+                for endpoint in not_supported[category]:
+                    table.add_row(
+                        endpoint, "[red]✗ Not Supported[/red]", "Not available"
+                    )
+
+                console.print(table)
+                console.print()
+
+        # Summary statistics
+        total_supported = sum(len(endpoints) for endpoints in supported.values())
+        total_emulated = sum(len(endpoints) for endpoints in emulated.values())
+        total_not_supported = sum(
+            len(endpoints) for endpoints in not_supported.values()
+        )
+        total_checked = total_supported + total_emulated + total_not_supported
+
+        summary_table = Table(title=f"Support Summary for {self.exchange}")
+        summary_table.add_column("Status", style="bold")
+        summary_table.add_column("Count", style="bold", justify="right")
+        summary_table.add_column("Percentage", style="bold", justify="right")
+
+        if total_checked > 0:
+            summary_table.add_row(
+                "[green]Fully Supported[/green]",
+                str(total_supported),
+                f"{(total_supported/total_checked)*100:.1f}%",
+            )
+            summary_table.add_row(
+                "[yellow]Emulated[/yellow]",
+                str(total_emulated),
+                f"{(total_emulated/total_checked)*100:.1f}%",
+            )
+            summary_table.add_row(
+                "[red]Not Supported[/red]",
+                str(total_not_supported),
+                f"{(total_not_supported/total_checked)*100:.1f}%",
+            )
+
+        console.print(summary_table)
+
+        # Additional exchange info
+        console.print(f"\n[bold]Exchange Information:[/bold]")
+        info_table = Table()
+        info_table.add_column("Property", style="cyan")
+        info_table.add_column("Value", style="white")
+
+        info_table.add_row("Exchange ID", self.exchange)
+        info_table.add_row(
+            "API Version", getattr(self.exchange_instance, "version", "Unknown")
+        )
+        info_table.add_row(
+            "Rate Limit",
+            f"{getattr(self.exchange_instance, 'rateLimit', 'Unknown')} ms",
+        )
+
+        # Check if sandbox mode is available
+        if hasattr(self.exchange_instance, "sandbox"):
+            info_table.add_row(
+                "Sandbox Mode",
+                "✓ Available" if self.exchange_instance.sandbox else "✗ Not enabled",
+            )
+
+        console.print(info_table)
+
+        # Ask if user wants to save the capability info
+        console.print("\n" + "=" * 60)
+        console.print("[bold]💾 Save endpoint support information to JSON file?[/bold]")
+        if Confirm.ask("Save endpoint capabilities data for reference?"):
+            self._save_capability_info_to_file(
+                has_dict, supported, emulated, not_supported
+            )
+
+    def _save_capability_info_to_file(
+        self, has_dict: dict, supported: dict, emulated: dict, not_supported: dict
+    ) -> None:
+        """Save endpoint capability information to a JSON file"""
+        try:
+            import os
+            from datetime import datetime
+
+            # Ensure responses directory exists
+            responses_dir = "responses"
+            os.makedirs(responses_dir, exist_ok=True)
+
+            # Create filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"ccxt_capabilities_{self.exchange}_{timestamp}.json"
+            filepath = os.path.join(responses_dir, filename)
+
+            # Calculate totals
+            total_supported = sum(len(endpoints) for endpoints in supported.values())
+            total_emulated = sum(len(endpoints) for endpoints in emulated.values())
+            total_not_supported = sum(
+                len(endpoints) for endpoints in not_supported.values()
+            )
+            total_checked = total_supported + total_emulated + total_not_supported
+
+            # Prepare data to save
+            data_to_save = {
+                "metadata": {
+                    "timestamp": datetime.now().isoformat(),
+                    "exchange": self.exchange,
+                    "description": "Endpoint capability and support information",
+                    "api_version": getattr(
+                        self.exchange_instance, "version", "Unknown"
+                    ),
+                    "rate_limit": getattr(
+                        self.exchange_instance, "rateLimit", "Unknown"
+                    ),
+                    "summary": {
+                        "total_checked": total_checked,
+                        "supported": total_supported,
+                        "emulated": total_emulated,
+                        "not_supported": total_not_supported,
+                        "support_percentage": (
+                            round((total_supported / total_checked) * 100, 1)
+                            if total_checked > 0
+                            else 0
+                        ),
+                        "emulated_percentage": (
+                            round((total_emulated / total_checked) * 100, 1)
+                            if total_checked > 0
+                            else 0
+                        ),
+                    },
+                },
+                "raw_has_dictionary": has_dict,
+                "categorized_endpoints": {
+                    "supported": supported,
+                    "emulated": emulated,
+                    "not_supported": not_supported,
+                },
+            }
+
+            # Save to file
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(data_to_save, f, indent=2, default=str, ensure_ascii=False)
+
+            console.print(f"\n[green]✅ Capability info saved to: {filepath}[/green]")
+            console.print(
+                f"[dim]File contains support status for {total_checked} endpoints[/dim]"
+            )
+
+            # Show file size
+            file_size = os.path.getsize(filepath)
+            if file_size > 1024 * 1024:  # > 1MB
+                console.print(
+                    f"[yellow]⚠️  File size: {file_size / (1024*1024):.1f} MB[/yellow]"
+                )
+            else:
+                console.print(f"[dim]File size: {file_size / 1024:.1f} KB[/dim]")
+
+        except Exception as e:
+            console.print(
+                f"\n[red]❌ Error saving capability info to file: {str(e)}[/red]"
+            )
+            console.print("[yellow]Capability info was not saved[/yellow]")
+
     def _save_endpoints_info_to_file(self, endpoints: Dict[str, List[str]]) -> None:
         """Save endpoints information to a JSON file"""
         try:
@@ -649,30 +922,33 @@ def main():
             console.print("\n" + "=" * 60)
             console.print("[bold]Available Actions:[/bold]")
             console.print("1. View all available endpoints")
-            console.print("2. Test a specific endpoint")
-            console.print("3. Change exchange")
-            console.print("4. Exit")
+            console.print("2. Check supported endpoints only")
+            console.print("3. Test a specific endpoint")
+            console.print("4. Change exchange")
+            console.print("5. Exit")
 
             choice = Prompt.ask(
-                "Select action", choices=["1", "2", "3", "4"], default="2"
+                "Select action", choices=["1", "2", "3", "4", "5"], default="3"
             )
 
             if choice == "1":
                 tester.display_endpoints()
             elif choice == "2":
+                tester.check_supported_endpoints()
+            elif choice == "3":
                 endpoint = tester.select_endpoint()
                 if endpoint:
                     tester.test_endpoint(endpoint)
                 else:
                     console.print("[yellow]Returning to main menu.[/yellow]")
-            elif choice == "3":
+            elif choice == "4":
                 # Clear current credentials before changing exchange
                 tester.cleanup()
                 exchange_name = tester.select_exchange()
                 api_key = Prompt.ask("Enter API Key (optional)", default="")
                 secret_key = Prompt.ask("Enter Secret Key (optional)", default="")
                 tester.setup_exchange(exchange_name, api_key, secret_key)
-            elif choice == "4":
+            elif choice == "5":
                 console.print("[green]Goodbye![/green]")
                 break
 
