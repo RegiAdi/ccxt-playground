@@ -701,8 +701,149 @@ class CCXTEndpointTester:
         if "self" in params:
             params.remove("self")
 
+        # Display detailed endpoint information
         console.print(f"\n[bold cyan]Testing endpoint: {endpoint}[/bold cyan]")
-        console.print(f"[dim]Parameters: {params}[/dim]")
+
+        # Get method documentation
+        try:
+            method_doc = method.__doc__ or "No documentation available"
+            if method_doc != "No documentation available":
+                console.print(
+                    Panel(
+                        method_doc.strip(),
+                        title="Endpoint Documentation",
+                        border_style="blue",
+                    )
+                )
+        except:
+            pass
+
+        # Display detailed parameter information
+        if params:
+            param_table = Table(title=f"Parameters for {endpoint}")
+            param_table.add_column("Parameter", style="cyan", width=15)
+            param_table.add_column("Type", style="green", width=15)
+            param_table.add_column("Required", style="yellow", width=10)
+            param_table.add_column("Description", style="white", width=50)
+            param_table.add_column("Example", style="dim", width=20)
+
+            # Parameter descriptions and examples
+            param_info = {
+                "symbol": {
+                    "type": "string",
+                    "required": "Yes",
+                    "description": "Trading pair symbol (e.g., 'BTC/USDT', 'ETH/IDR')",
+                    "example": "BTC/USDT",
+                },
+                "limit": {
+                    "type": "integer",
+                    "required": "No",
+                    "description": "Number of records to return (default varies by exchange)",
+                    "example": "100",
+                },
+                "since": {
+                    "type": "integer",
+                    "required": "No",
+                    "description": "Timestamp in milliseconds to fetch data from",
+                    "example": "1640995200000",
+                },
+                "timeframe": {
+                    "type": "string",
+                    "required": "No",
+                    "description": "Candle timeframe (1m, 5m, 1h, 1d, etc.)",
+                    "example": "1h",
+                },
+                "order_id": {
+                    "type": "string",
+                    "required": "Yes",
+                    "description": "Unique order identifier",
+                    "example": "12345678",
+                },
+                "side": {
+                    "type": "string",
+                    "required": "Yes",
+                    "description": "Order side: 'buy' or 'sell'",
+                    "example": "buy",
+                },
+                "amount": {
+                    "type": "float",
+                    "required": "Yes",
+                    "description": "Order amount/quantity in base currency",
+                    "example": "0.001",
+                },
+                "price": {
+                    "type": "float",
+                    "required": "No",
+                    "description": "Order price (required for limit orders)",
+                    "example": "50000.0",
+                },
+                "type": {
+                    "type": "string",
+                    "required": "No",
+                    "description": "Order type: 'market', 'limit', 'stop', etc.",
+                    "example": "limit",
+                },
+                "currency": {
+                    "type": "string",
+                    "required": "Yes",
+                    "description": "Currency code (e.g., 'BTC', 'ETH', 'USDT')",
+                    "example": "BTC",
+                },
+                "address": {
+                    "type": "string",
+                    "required": "Yes",
+                    "description": "Wallet address for deposits/withdrawals",
+                    "example": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+                },
+                "tag": {
+                    "type": "string",
+                    "required": "No",
+                    "description": "Additional tag/memo for some currencies",
+                    "example": "123456",
+                },
+                "params": {
+                    "type": "dict",
+                    "required": "No",
+                    "description": "Additional exchange-specific parameters",
+                    "example": "{}",
+                },
+            }
+
+            for param in params:
+                info = param_info.get(
+                    param,
+                    {
+                        "type": "unknown",
+                        "required": "Unknown",
+                        "description": "Exchange-specific parameter",
+                        "example": "N/A",
+                    },
+                )
+
+                param_table.add_row(
+                    param,
+                    info["type"],
+                    info["required"],
+                    info["description"],
+                    info["example"],
+                )
+
+            console.print(param_table)
+
+            # Show additional notes
+            console.print("\n[bold yellow]📝 Parameter Notes:[/bold yellow]")
+            console.print(
+                "• [dim]Leave empty for optional parameters to use default values[/dim]"
+            )
+            console.print(
+                "• [dim]Type 'none' to explicitly set a parameter to None[/dim]"
+            )
+            console.print("• [dim]Type 'true'/'false' for boolean values[/dim]")
+            console.print(
+                "• [dim]Use 'now' for 'since' parameter to use current timestamp[/dim]"
+            )
+        else:
+            console.print("[green]✓ This endpoint requires no parameters[/green]")
 
         # Collect parameters from user
         args = []
@@ -712,46 +853,141 @@ class CCXTEndpointTester:
             if param == "symbol":
                 # For symbol parameters, show available markets
                 try:
-                    markets = list(self.exchange_instance.markets.keys())[:10]
+                    markets = list(self.exchange_instance.markets.keys())
                     console.print(
-                        f"\n[blue]Available symbols (showing first 10):[/blue]"
+                        f"\n[blue]Available symbols for {self.exchange} (showing first 20):[/blue]"
                     )
-                    console.print(", ".join(markets))
+
+                    # Display markets in a nice table
+                    market_table = Table(title="Available Trading Pairs")
+                    market_table.add_column("Symbol", style="cyan")
+                    market_table.add_column("Base", style="green")
+                    market_table.add_column("Quote", style="yellow")
+                    market_table.add_column("Active", style="white")
+
+                    for i, symbol in enumerate(markets[:20]):
+                        if symbol in self.exchange_instance.markets:
+                            market = self.exchange_instance.markets[symbol]
+                            market_table.add_row(
+                                symbol,
+                                market.get("base", "N/A"),
+                                market.get("quote", "N/A"),
+                                "✓" if market.get("active", True) else "✗",
+                            )
+
+                    console.print(market_table)
+                    if len(markets) > 20:
+                        console.print(
+                            f"[dim]... and {len(markets) - 20} more markets[/dim]"
+                        )
+
                     value = Prompt.ask(
                         f"Enter {param}", default=markets[0] if markets else "BTC/IDR"
                     )
-                except:
+                except Exception as e:
+                    console.print(f"[yellow]Could not load markets: {str(e)}[/yellow]")
                     value = Prompt.ask(f"Enter {param}", default="BTC/IDR")
+
             elif param == "limit":
+                console.print(f"\n[blue]Setting limit parameter:[/blue]")
+                console.print("[dim]• Common values: 10, 50, 100, 500, 1000[/dim]")
+                console.print("[dim]• Some exchanges have maximum limits[/dim]")
                 value = Prompt.ask(f"Enter {param}", default="10")
                 try:
                     value = int(value)
                 except:
                     pass
+
             elif param == "since":
-                value = Prompt.ask(f"Enter {param} (timestamp or 'now')", default="now")
+                console.print(
+                    f"\n[blue]Setting since parameter (timestamp in milliseconds):[/blue]"
+                )
+                console.print("[dim]• Use 'now' for current timestamp[/dim]")
+                console.print(
+                    "[dim]• Or enter specific timestamp (e.g., 1640995200000)[/dim]"
+                )
+                console.print("[dim]• Or leave empty to start from beginning[/dim]")
+                value = Prompt.ask(f"Enter {param}", default="")
                 if value.lower() == "now":
                     import time
 
                     value = int(time.time() * 1000)
-                else:
+                    console.print(f"[green]Using current timestamp: {value}[/green]")
+                elif value:
                     try:
                         value = int(value)
                     except:
-                        pass
+                        console.print(
+                            "[yellow]Invalid timestamp format, using as string[/yellow]"
+                        )
+                else:
+                    value = None
+
+            elif param == "timeframe":
+                console.print(f"\n[blue]Setting timeframe parameter:[/blue]")
+                console.print("[dim]• Common values: 1m, 5m, 15m, 1h, 4h, 1d, 1w[/dim]")
+                value = Prompt.ask(f"Enter {param}", default="1h")
+
+            elif param in ["side", "type"]:
+                console.print(f"\n[blue]Setting {param} parameter:[/blue]")
+                if param == "side":
+                    console.print("[dim]• Valid values: 'buy', 'sell'[/dim]")
+                    value = Prompt.ask(f"Enter {param}", default="buy")
+                else:
+                    console.print(
+                        "[dim]• Common values: 'market', 'limit', 'stop_loss', 'take_profit'[/dim]"
+                    )
+                    value = Prompt.ask(f"Enter {param}", default="limit")
+
+            elif param in ["amount", "price"]:
+                console.print(
+                    f"\n[blue]Setting {param} parameter (decimal number):[/blue]"
+                )
+                if param == "amount":
+                    console.print(
+                        "[dim]• Amount in base currency (e.g., 0.001 BTC)[/dim]"
+                    )
+                    value = Prompt.ask(f"Enter {param}", default="0.001")
+                else:
+                    console.print(
+                        "[dim]• Price per unit (e.g., 50000.0 for BTC/USDT)[/dim]"
+                    )
+                    value = Prompt.ask(f"Enter {param}", default="")
+                try:
+                    if value:
+                        value = float(value)
+                except:
+                    console.print(
+                        "[yellow]Invalid number format, using as string[/yellow]"
+                    )
+
             else:
+                console.print(f"\n[blue]Setting {param} parameter:[/blue]")
+                console.print(
+                    f"[dim]• Parameter type: {param_info.get(param, {}).get('type', 'unknown')}[/dim]"
+                )
+                console.print(
+                    f"[dim]• Description: {param_info.get(param, {}).get('description', 'Exchange-specific parameter')}[/dim]"
+                )
                 value = Prompt.ask(f"Enter {param}", default="")
+
+                # Handle special string values
                 if value.lower() == "none":
                     value = None
                 elif value.lower() == "true":
                     value = True
                 elif value.lower() == "false":
                     value = False
+                elif value == "":
+                    value = None
 
-            if param in ["symbol", "limit", "since"]:
-                args.append(value)
+            # Organize parameters
+            if param in ["symbol", "limit", "since", "timeframe"]:
+                if value is not None:
+                    args.append(value)
             else:
-                kwargs[param] = value
+                if value is not None:
+                    kwargs[param] = value
 
         # Execute the method
         try:
