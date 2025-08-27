@@ -304,6 +304,7 @@ class CCXTEndpointTester:
                 console.print("[blue]Press 'p' for previous page[/blue]")
             if end_idx < len(all_methods):
                 console.print("[blue]Press 'n' for next page[/blue]")
+            console.print("[blue]Press 'enter' to input endpoint number[/blue]")
             console.print("[blue]Press 'q' to return to main menu[/blue]")
             console.print("[dim]Press any key to continue...[/dim]")
 
@@ -336,6 +337,22 @@ class CCXTEndpointTester:
                 elif key == "n" and end_idx < len(all_methods):
                     current_page += 1
                     continue
+                elif key == "\r" or key == "\n":  # Enter key pressed
+                    console.print("\n[blue]Enter endpoint number:[/blue]")
+                    full_choice = Prompt.ask(f"Endpoint number (1-{len(all_methods)})")
+
+                    if full_choice.isdigit():
+                        idx = int(full_choice) - 1
+                        if 0 <= idx < len(all_methods):
+                            return all_methods[idx]
+                        else:
+                            console.print(
+                                f"[red]Invalid endpoint number. Must be 1-{len(all_methods)}[/red]"
+                            )
+                    else:
+                        console.print(
+                            "[red]Invalid input. Please enter a number.[/red]"
+                        )
                 elif key.isdigit():
                     # For number input, we need to get the full number
                     console.print(f"\n[blue]Selected: {key}[/blue]")
