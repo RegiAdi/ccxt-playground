@@ -195,6 +195,65 @@ class CCXTEndpointTester:
                 console.print(table)
                 console.print()
 
+        # Ask if user wants to save endpoints info to JSON
+        if endpoints:
+            console.print("=" * 60)
+            console.print("[bold]💾 Save endpoints information to JSON file?[/bold]")
+            if Confirm.ask("Save all endpoints data for reference?"):
+                self._save_endpoints_info_to_file(endpoints)
+
+    def _save_endpoints_info_to_file(self, endpoints: Dict[str, List[str]]) -> None:
+        """Save endpoints information to a JSON file"""
+        try:
+            import os
+            from datetime import datetime
+
+            # Ensure responses directory exists
+            responses_dir = "responses"
+            os.makedirs(responses_dir, exist_ok=True)
+
+            # Create filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"ccxt_endpoints_{self.exchange}_{timestamp}.json"
+            filepath = os.path.join(responses_dir, filename)
+
+            # Prepare data to save
+            data_to_save = {
+                "metadata": {
+                    "timestamp": datetime.now().isoformat(),
+                    "exchange": self.exchange,
+                    "description": "Available endpoints information",
+                    "total_endpoints": sum(
+                        len(methods) for methods in endpoints.values()
+                    ),
+                },
+                "endpoints": endpoints,
+            }
+
+            # Save to file
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(data_to_save, f, indent=2, default=str, ensure_ascii=False)
+
+            console.print(f"\n[green]✅ Endpoints info saved to: {filepath}[/green]")
+            console.print(
+                f"[dim]File contains {sum(len(methods) for methods in endpoints.values())} endpoint definitions[/dim]"
+            )
+
+            # Show file size
+            file_size = os.path.getsize(filepath)
+            if file_size > 1024 * 1024:  # > 1MB
+                console.print(
+                    f"[yellow]⚠️  File size: {file_size / (1024*1024):.1f} MB[/yellow]"
+                )
+            else:
+                console.print(f"[dim]File size: {file_size / 1024:.1f} KB[/dim]")
+
+        except Exception as e:
+            console.print(
+                f"\n[red]❌ Error saving endpoints info to file: {str(e)}[/red]"
+            )
+            console.print("[yellow]Endpoints info was not saved[/yellow]")
+
     def select_endpoint(self) -> str:
         """Interactive endpoint selection"""
         endpoints = self.get_available_endpoints()

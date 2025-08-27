@@ -199,6 +199,7 @@ The tool organizes endpoints into logical categories:
 - **Response Summaries**: Quick overview of response structure
 - **Navigation**: Paginated endpoint browsing
 - **Response Export**: Save responses to JSON files with full context
+- **Endpoints Export**: Save available endpoints information to JSON files
 
 ## Security Best Practices
 
@@ -250,6 +251,18 @@ After each endpoint test, you can optionally save the response to a JSON file:
 - **Safe Filenames**: Automatically handles special characters in endpoint names
 
 **Example filename**: `responses/ccxt_response_indodax_fetch_ticker_20241201_143022.json`
+
+### 📋 Endpoints Information Export
+
+When viewing available endpoints (Menu option 1), you can save the complete endpoints information:
+
+- **Complete List**: All available endpoints organized by category
+- **Method Descriptions**: Docstrings and method information when available
+- **Categorized Data**: Public, Market Data, Trading, Account, and Other endpoints
+- **Reference File**: Perfect for documentation and analysis
+- **Metadata**: Exchange, timestamp, and total endpoint count
+
+**Example filename**: `responses/ccxt_endpoints_indodax_20241201_143022.json`
 
 ## Development
 
