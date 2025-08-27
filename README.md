@@ -197,9 +197,18 @@ The tool organizes endpoints into logical categories:
 - **JSON Syntax Highlighting**: Beautiful formatting of API responses
 - **Structured Tables**: Clear presentation of request details
 - **Response Summaries**: Quick overview of response structure
-- **Navigation**: Paginated endpoint browsing
+- **Navigation**: Paginated endpoint browsing with exit options
 - **Response Export**: Save responses to JSON files with full context
 - **Endpoints Export**: Save available endpoints information to JSON files
+
+### 🔄 **Navigation Features**
+
+- **Paginated Browsing**: Navigate through endpoints 50 at a time in 2 columns
+- **Single-Key Navigation**: Press 'p' for previous page, 'n' for next page (no Enter needed)
+- **Instant Exit**: Press 'q' to return to main menu immediately
+- **Smart Layout**: 2-column table for better readability and more endpoints per page
+- **Auto-Advance**: Press any other key to continue to next page
+- **Clear Instructions**: Always visible navigation help
 
 ## Security Best Practices
 

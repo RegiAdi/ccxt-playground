@@ -265,8 +265,8 @@ class CCXTEndpointTester:
 
         all_methods = sorted(all_methods)
 
-        # Display paginated list
-        page_size = 20
+        # Display paginated list with larger page size
+        page_size = 50
         current_page = 0
 
         while True:
@@ -274,37 +274,99 @@ class CCXTEndpointTester:
             end_idx = start_idx + page_size
             current_methods = all_methods[start_idx:end_idx]
 
-            table = Table(title=f"Available Endpoints (Page {current_page + 1})")
-            table.add_column("Index", style="cyan")
-            table.add_column("Method", style="green")
+            table = Table(
+                title=f"Available Endpoints (Page {current_page + 1} of {(len(all_methods) + page_size - 1) // page_size})"
+            )
+            table.add_column("Index", style="cyan", width=8)
+            table.add_column("Method", style="green", width=35)
+            table.add_column("Index", style="cyan", width=8)
+            table.add_column("Method", style="green", width=35)
 
-            for i, method in enumerate(current_methods):
-                table.add_row(str(start_idx + i + 1), method)
+            # Display endpoints in 2 columns
+            for i in range(0, len(current_methods), 2):
+                left_idx = start_idx + i + 1
+                left_method = current_methods[i]
+
+                if i + 1 < len(current_methods):
+                    right_idx = start_idx + i + 2
+                    right_method = current_methods[i + 1]
+                    table.add_row(
+                        str(left_idx), left_method, str(right_idx), right_method
+                    )
+                else:
+                    # Last row with only left column
+                    table.add_row(str(left_idx), left_method, "", "")
 
             console.print(table)
 
+            # Navigation instructions
             if current_page > 0:
                 console.print("[blue]Press 'p' for previous page[/blue]")
             if end_idx < len(all_methods):
                 console.print("[blue]Press 'n' for next page[/blue]")
+            console.print("[blue]Press 'q' to return to main menu[/blue]")
+            console.print("[dim]Press any key to continue...[/dim]")
 
-            choice = Prompt.ask(
-                f"\nSelect endpoint (1-{len(all_methods)}) or 'p'/'n' for navigation",
-                default="1",
-            )
+            # Single key input without Enter
+            import sys
 
-            if choice.lower() == "p" and current_page > 0:
-                current_page -= 1
+            try:
+                if os.name == "nt":  # Windows
+                    import msvcrt
+
+                    key = msvcrt.getch().decode("utf-8").lower()
+                else:  # Unix/Linux/macOS
+                    import tty
+                    import termios
+
+                    fd = sys.stdin.fileno()
+                    old_settings = termios.tcgetattr(fd)
+                    try:
+                        tty.setraw(sys.stdin.fileno())
+                        key = sys.stdin.read(1).lower()
+                    finally:
+                        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+                # Handle navigation keys
+                if key == "q":
+                    return None
+                elif key == "p" and current_page > 0:
+                    current_page -= 1
+                    continue
+                elif key == "n" and end_idx < len(all_methods):
+                    current_page += 1
+                    continue
+                elif key.isdigit():
+                    # For number input, we need to get the full number
+                    console.print(f"\n[blue]Selected: {key}[/blue]")
+                    console.print(
+                        "[dim]Enter full endpoint number and press Enter:[/dim]"
+                    )
+                    full_choice = Prompt.ask("Endpoint number", default=key)
+
+                    if full_choice.isdigit():
+                        idx = int(full_choice) - 1
+                        if 0 <= idx < len(all_methods):
+                            return all_methods[idx]
+                        else:
+                            console.print(
+                                f"[red]Invalid endpoint number. Must be 1-{len(all_methods)}[/red]"
+                            )
+                    else:
+                        console.print(
+                            "[red]Invalid input. Please enter a number.[/red]"
+                        )
+                else:
+                    # Any other key continues to next page or stays on current
+                    if end_idx < len(all_methods):
+                        current_page += 1
+                    continue
+
+            except (KeyboardInterrupt, EOFError):
+                return None
+            except Exception as e:
+                console.print(f"[red]Navigation error: {str(e)}[/red]")
                 continue
-            elif choice.lower() == "n" and end_idx < len(all_methods):
-                current_page += 1
-                continue
-            elif choice.isdigit():
-                idx = int(choice) - 1
-                if 0 <= idx < len(all_methods):
-                    return all_methods[idx]
-
-            console.print("[red]Invalid choice. Please try again.[/red]")
 
     def test_endpoint(self, endpoint: str) -> None:
         """Test a specific endpoint and display results"""
@@ -578,7 +640,10 @@ def main():
                 tester.display_endpoints()
             elif choice == "2":
                 endpoint = tester.select_endpoint()
-                tester.test_endpoint(endpoint)
+                if endpoint:
+                    tester.test_endpoint(endpoint)
+                else:
+                    console.print("[yellow]Returning to main menu.[/yellow]")
             elif choice == "3":
                 # Clear current credentials before changing exchange
                 tester.cleanup()
