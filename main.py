@@ -531,9 +531,9 @@ class CCXTEndpointTester:
         """Get support status icon for an endpoint"""
         if not self.exchange_instance:
             return ""
-        
-        has_dict = getattr(self.exchange_instance, 'has', {})
-        
+
+        has_dict = getattr(self.exchange_instance, "has", {})
+
         if endpoint in has_dict:
             value = has_dict[endpoint]
             if value is True:
@@ -590,17 +590,23 @@ class CCXTEndpointTester:
                     right_method = right_methods[i]
                     right_status = self._get_endpoint_support_status(right_method)
                     table.add_row(
-                        str(left_idx), left_status, left_method, 
-                        str(right_idx), right_status, right_method
+                        str(left_idx),
+                        left_status,
+                        left_method,
+                        str(right_idx),
+                        right_status,
+                        right_method,
                     )
                 else:
                     # Last row with only left column
                     table.add_row(str(left_idx), left_status, left_method, "", "", "")
 
             console.print(table)
-            
+
             # Add legend for status icons
-            console.print("\n[bold]Legend:[/bold] [green]✓[/green] Supported | [yellow]⚡[/yellow] Emulated | [red]✗[/red] Not Supported | [dim]?[/dim] Unknown")
+            console.print(
+                "\n[bold]Legend:[/bold] [green]✓[/green] Supported | [yellow]⚡[/yellow] Emulated | [red]✗[/red] Not Supported | [dim]?[/dim] Unknown"
+            )
 
             # Navigation instructions
             if current_page > 0:
