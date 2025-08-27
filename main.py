@@ -556,8 +556,8 @@ class CCXTEndpointTester:
 
         all_methods = sorted(all_methods)
 
-        # Display paginated list with larger page size
-        page_size = 50
+        # Display paginated list with 20 items per page
+        page_size = 20
         current_page = 0
 
         while True:
@@ -568,38 +568,27 @@ class CCXTEndpointTester:
             table = Table(
                 title=f"Available Endpoints with Support Status (Page {current_page + 1} of {(len(all_methods) + page_size - 1) // page_size})"
             )
-            table.add_column("Index", style="cyan", width=6)
-            table.add_column("Status", style="white", width=6)
-            table.add_column("Method", style="green", width=30)
-            table.add_column("Index", style="cyan", width=6)
-            table.add_column("Status", style="white", width=6)
-            table.add_column("Method", style="green", width=30)
+            table.add_column("Index", style="cyan", width=8)
+            table.add_column("Status", style="white", width=8)
+            table.add_column("Method", style="green", width=40)
+            table.add_column("Description", style="dim", width=50)
 
-            # Display endpoints in 2 columns (left column first, then right column)
-            mid_point = (len(current_methods) + 1) // 2
-            left_methods = current_methods[:mid_point]
-            right_methods = current_methods[mid_point:]
+            # Display endpoints in single column
+            for i, method in enumerate(current_methods):
+                idx = start_idx + i + 1
+                status = self._get_endpoint_support_status(method)
 
-            for i in range(len(left_methods)):
-                left_idx = start_idx + i + 1
-                left_method = left_methods[i]
-                left_status = self._get_endpoint_support_status(left_method)
-
-                if i < len(right_methods):
-                    right_idx = start_idx + mid_point + i + 1
-                    right_method = right_methods[i]
-                    right_status = self._get_endpoint_support_status(right_method)
-                    table.add_row(
-                        str(left_idx),
-                        left_status,
-                        left_method,
-                        str(right_idx),
-                        right_status,
-                        right_method,
+                # Get method description from docstring if available
+                try:
+                    method_obj = getattr(self.exchange_instance, method)
+                    doc = method_obj.__doc__ or "No description available"
+                    description = (
+                        doc.split("\n")[0][:47] + "..." if len(doc) > 50 else doc
                     )
-                else:
-                    # Last row with only left column
-                    table.add_row(str(left_idx), left_status, left_method, "", "", "")
+                except:
+                    description = "No description available"
+
+                table.add_row(str(idx), status, method, description)
 
             console.print(table)
 
