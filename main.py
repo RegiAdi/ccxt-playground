@@ -282,14 +282,18 @@ class CCXTEndpointTester:
             table.add_column("Index", style="cyan", width=8)
             table.add_column("Method", style="green", width=35)
 
-            # Display endpoints in 2 columns
-            for i in range(0, len(current_methods), 2):
-                left_idx = start_idx + i + 1
-                left_method = current_methods[i]
+            # Display endpoints in 2 columns (left column first, then right column)
+            mid_point = (len(current_methods) + 1) // 2
+            left_methods = current_methods[:mid_point]
+            right_methods = current_methods[mid_point:]
 
-                if i + 1 < len(current_methods):
-                    right_idx = start_idx + i + 2
-                    right_method = current_methods[i + 1]
+            for i in range(len(left_methods)):
+                left_idx = start_idx + i + 1
+                left_method = left_methods[i]
+
+                if i < len(right_methods):
+                    right_idx = start_idx + mid_point + i + 1
+                    right_method = right_methods[i]
                     table.add_row(
                         str(left_idx), left_method, str(right_idx), right_method
                     )
