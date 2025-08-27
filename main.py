@@ -527,8 +527,26 @@ class CCXTEndpointTester:
             )
             console.print("[yellow]Endpoints info was not saved[/yellow]")
 
+    def _get_endpoint_support_status(self, endpoint: str) -> str:
+        """Get support status icon for an endpoint"""
+        if not self.exchange_instance:
+            return ""
+        
+        has_dict = getattr(self.exchange_instance, 'has', {})
+        
+        if endpoint in has_dict:
+            value = has_dict[endpoint]
+            if value is True:
+                return "[green]✓[/green]"  # Fully supported
+            elif value == "emulated":
+                return "[yellow]⚡[/yellow]"  # Emulated
+            else:
+                return "[red]✗[/red]"  # Not supported
+        else:
+            return "[dim]?[/dim]"  # Unknown status
+
     def select_endpoint(self) -> str:
-        """Interactive endpoint selection"""
+        """Interactive endpoint selection with support status indicators"""
         endpoints = self.get_available_endpoints()
         all_methods = []
 
@@ -548,12 +566,14 @@ class CCXTEndpointTester:
             current_methods = all_methods[start_idx:end_idx]
 
             table = Table(
-                title=f"Available Endpoints (Page {current_page + 1} of {(len(all_methods) + page_size - 1) // page_size})"
+                title=f"Available Endpoints with Support Status (Page {current_page + 1} of {(len(all_methods) + page_size - 1) // page_size})"
             )
-            table.add_column("Index", style="cyan", width=8)
-            table.add_column("Method", style="green", width=35)
-            table.add_column("Index", style="cyan", width=8)
-            table.add_column("Method", style="green", width=35)
+            table.add_column("Index", style="cyan", width=6)
+            table.add_column("Status", style="white", width=6)
+            table.add_column("Method", style="green", width=30)
+            table.add_column("Index", style="cyan", width=6)
+            table.add_column("Status", style="white", width=6)
+            table.add_column("Method", style="green", width=30)
 
             # Display endpoints in 2 columns (left column first, then right column)
             mid_point = (len(current_methods) + 1) // 2
@@ -563,22 +583,28 @@ class CCXTEndpointTester:
             for i in range(len(left_methods)):
                 left_idx = start_idx + i + 1
                 left_method = left_methods[i]
+                left_status = self._get_endpoint_support_status(left_method)
 
                 if i < len(right_methods):
                     right_idx = start_idx + mid_point + i + 1
                     right_method = right_methods[i]
+                    right_status = self._get_endpoint_support_status(right_method)
                     table.add_row(
-                        str(left_idx), left_method, str(right_idx), right_method
+                        str(left_idx), left_status, left_method, 
+                        str(right_idx), right_status, right_method
                     )
                 else:
                     # Last row with only left column
-                    table.add_row(str(left_idx), left_method, "", "")
+                    table.add_row(str(left_idx), left_status, left_method, "", "", "")
 
             console.print(table)
+            
+            # Add legend for status icons
+            console.print("\n[bold]Legend:[/bold] [green]✓[/green] Supported | [yellow]⚡[/yellow] Emulated | [red]✗[/red] Not Supported | [dim]?[/dim] Unknown")
 
             # Navigation instructions
             if current_page > 0:
-                console.print("[blue]Press 'p' for previous page[/blue]")
+                console.print("\n[blue]Press 'p' for previous page[/blue]")
             if end_idx < len(all_methods):
                 console.print("[blue]Press 'n' for next page[/blue]")
             console.print("[blue]Press 'enter' to input endpoint number[/blue]")
