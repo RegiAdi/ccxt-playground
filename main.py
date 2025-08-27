@@ -46,32 +46,10 @@ class CCXTEndpointTester:
         """Interactive exchange selection"""
         exchanges = self.get_available_exchanges()
 
-        # Show popular exchanges first (Indonesia-friendly)
-        popular = [
-            "indodax",
-            "coinbase",
-            "kraken",
-            "kucoin",
-            "okx",
-            "bybit",
-            "gate",
-            "mexc",
-        ]
-        popular_exchanges = [ex for ex in popular if ex in exchanges]
-        other_exchanges = [ex for ex in exchanges if ex not in popular]
-
-        table = Table(title="Available Exchanges")
-        table.add_column("Popular Exchanges", style="cyan")
-        table.add_column("Other Exchanges", style="blue")
-
-        # Fill table rows
-        max_rows = max(len(popular_exchanges), len(other_exchanges))
-        for i in range(max_rows):
-            popular_ex = popular_exchanges[i] if i < len(popular_exchanges) else ""
-            other_ex = other_exchanges[i] if i < len(other_exchanges) else ""
-            table.add_row(popular_ex, other_ex)
-
-        console.print(table)
+        console.print(
+            f"\n[bold cyan]Available Exchanges ({len(exchanges)} total):[/bold cyan]"
+        )
+        self._print_exchanges_in_columns(exchanges, 4)
 
         while True:
             exchange_name = (
@@ -84,6 +62,52 @@ class CCXTEndpointTester:
                 console.print(
                     f"[red]Exchange '{exchange_name}' not found. Please try again.[/red]"
                 )
+
+    def _print_exchanges_in_columns(
+        self, exchanges: List[str], columns: int = 4
+    ) -> None:
+        """Print exchanges in a compact column format, sorted alphabetically, filling columns vertically"""
+        if not exchanges:
+            console.print("[dim]None available[/dim]")
+            return
+
+        # Sort exchanges alphabetically
+        sorted_exchanges = sorted(exchanges)
+
+        # Calculate padding for each column
+        max_width = max(len(ex) for ex in sorted_exchanges) if sorted_exchanges else 0
+        col_width = max_width + 2  # Add some padding
+
+        # Calculate rows needed and organize data by columns
+        total_items = len(sorted_exchanges)
+        rows_per_column = (total_items + columns - 1) // columns  # Round up
+
+        # Create a 2D grid to fill columns vertically first
+        grid = []
+        for row in range(rows_per_column):
+            grid_row = []
+            for col in range(columns):
+                index = col * rows_per_column + row
+                if index < total_items:
+                    grid_row.append(sorted_exchanges[index])
+                else:
+                    grid_row.append("")  # Empty cell
+            grid.append(grid_row)
+
+        # Print the grid
+        for row in grid:
+            row_text = ""
+            for j, exchange in enumerate(row):
+                if exchange:  # Only print non-empty cells
+                    if j < len(row) - 1 and any(
+                        row[k] for k in range(j + 1, len(row))
+                    ):  # Not the last item with content
+                        row_text += f"[cyan]{exchange:<{col_width}}[/cyan]"
+                    else:  # Last item with content in row
+                        row_text += f"[cyan]{exchange}[/cyan]"
+                else:
+                    row_text += " " * col_width  # Empty space for alignment
+            console.print(row_text.rstrip())  # Remove trailing spaces
 
     def setup_exchange(
         self, exchange_name: str, api_key: str = "", secret: str = ""
